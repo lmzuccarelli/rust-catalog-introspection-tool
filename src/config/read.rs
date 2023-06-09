@@ -1,7 +1,7 @@
+use crate::api::schema::*;
+use crate::Path;
 use std::fs::File;
 use std::io::Read;
-use crate::Path;
-use crate::api::schema::*;
 
 // read the 'image set config' file
 pub fn load_config(dir: String) -> Result<String, Box<dyn std::error::Error>> {
@@ -22,9 +22,8 @@ pub fn load_config(dir: String) -> Result<String, Box<dyn std::error::Error>> {
 }
 
 // parse the 'image set config' file
-pub fn parse_yaml_config(data: String) -> Result<ImageSetConfig,serde_yaml::Error> {
+pub fn parse_yaml_config(data: String) -> Result<FilterConfig, serde_yaml::Error> {
     // Parse the string of data into serde_json::ImageSetConfig.
-    let res = serde_yaml::from_str::<ImageSetConfig>(&data);
+    let res = serde_yaml::from_str::<FilterConfig>(&data);
     res
 }
-

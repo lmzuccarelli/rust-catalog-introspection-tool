@@ -23,22 +23,19 @@ use process::upgradepath::*;
 #[tokio::main]
 async fn main() {
     let args = Cli::parse();
-    let filter = args.filter.as_ref().unwrap().to_string();
     let cfg = args.config.as_ref().unwrap().to_string();
 
     log_info(&format!(
-        "rust-container-tools {} {} {}",
-        cfg, args.image, filter
+        "rust-operator-upgradepath-tool {} {} ",
+        cfg, args.image
     ));
 
     let img_ref = parse_image_index(args.image);
 
     // Parse the config serde_yaml::ImageSetConfig.
-    if cfg != "" {
-        let config = load_config(cfg).unwrap();
-        let isc = parse_yaml_config(config).unwrap();
-        log_debug(&format!("{:#?}", isc.mirror.platform));
-    }
+    let config = load_config(cfg).unwrap();
+    let filter_config = parse_yaml_config(config).unwrap();
+    log_debug(&format!("{:#?}", filter_config.operators));
 
     let manifest_json = get_manifest_json_file(img_ref.name.clone(), img_ref.version.clone());
     let working_dir_blobs = get_blobs_dir(img_ref.name.clone(), img_ref.version.clone());
@@ -72,14 +69,13 @@ async fn main() {
     } else {
         log_info("cache exists nothing to do");
     }
-    if args.action == "list" {
-        let dir = find_dir(working_dir_cache.clone(), "configs".to_string()).await;
-        log_info(&format!("full path for directory 'configs' {} ", &dir));
-        if dir != "" {
-            list_components("operator".to_string(), dir, filter).await;
-        } else {
-            log_error("configs directory not found");
-        }
+
+    let dir = find_dir(working_dir_cache.clone(), "configs".to_string()).await;
+    log_info(&format!("full path for directory 'configs' {} ", &dir));
+    if dir != "" {
+        list_components(dir, filter_config).await;
+    } else {
+        log_error("configs directory not found");
     }
 }
 

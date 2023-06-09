@@ -1,0 +1,5 @@
+kind: FilterConfiguration
+apiVersion: mirror.openshift.io/v1alpha2
+operators:
+  - name: aws-load-balancer-operator
+    channel: stable

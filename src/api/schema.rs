@@ -88,10 +88,10 @@ pub struct RegistryRedhatIo {
 
 /// rust-container-tool cli struct
 #[derive(Parser, Debug)]
-#[command(name = "rust-container-tool")]
-#[command(author = "Luigi Mario Zuccarelli <luigizuccarelli@gmail.com>")]
+#[command(name = "rust-operator-upgradepath-tool")]
+#[command(author = "Luigi Mario Zuccarelli <luzuccar@redhat.com>")]
 #[command(version = "0.0.1")]
-#[command(about = "Used to mirror images from registry to disk and disk to registry", long_about = None)]
+#[command(about = "Used to calcluate an upgrade path for a given (list) of operators", long_about = None)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     /// config file to use
@@ -101,87 +101,31 @@ pub struct Cli {
     /// image-index to list
     #[arg(short, long, value_name = "image-index")]
     pub image: String,
-
-    /// action
-    #[arg(short, long, value_name = "action")]
-    pub action: String,
-
-    /// used to filter specific component for list action
-    #[arg(short, long, value_name = "filter", default_value = "all")]
-    pub filter: Option<String>,
 }
 
 /// config schema
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ImageSetConfig {
+pub struct FilterConfig {
     #[serde(rename = "kind")]
     pub kind: String,
 
     #[serde(rename = "apiVersion")]
     pub api_version: String,
 
-    #[serde(rename = "storageConfig")]
-    pub storage_config: StorageConfig,
-
-    #[serde(rename = "mirror")]
-    pub mirror: Mirror,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Mirror {
-    #[serde(rename = "platform")]
-    pub platform: Platform,
-
     #[serde(rename = "operators")]
     pub operators: Vec<Operator>,
-
-    #[serde(rename = "additionalImages")]
-    pub additional_images: Vec<Image>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Image {
-    #[serde(rename = "name")]
-    name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Operator {
-    #[serde(rename = "catalog")]
-    catalog: String,
-
-    #[serde(rename = "packages")]
-    packages: Option<Vec<Image>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Platform {
-    #[serde(rename = "channels")]
-    channels: Vec<ChannelP>,
-
-    #[serde(rename = "graph")]
-    graph: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ChannelP {
     #[serde(rename = "name")]
-    name: String,
+    pub name: String,
 
-    #[serde(rename = "type")]
-    channel_type: String,
-}
+    #[serde(rename = "channel")]
+    pub channel: String,
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct StorageConfig {
-    #[serde(rename = "local")]
-    local: Local,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Local {
-    #[serde(rename = "path")]
-    path: String,
+    #[serde(rename = "fromVersion")]
+    pub from_version: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
