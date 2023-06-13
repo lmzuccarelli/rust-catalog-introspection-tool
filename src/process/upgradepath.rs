@@ -1,21 +1,47 @@
 use crate::api::schema::*;
 use crate::log::logging::*;
 use crate::manifests::catalogs::*;
-//use semver::{BuildMetadata, Prerelease, Version, VersionReq};
-use semver::Version;
+use semver::{BuildMetadata, Prerelease, Version};
 use std::cmp::*;
+use std::fs;
 
-// list all components in the current image index
+// list all components in the current operator image index
 pub async fn list_components(dir: String, filter: FilterConfig) {
-    for operator in filter.operators {
-        let dc = read_operator_catalog(dir.to_string() + &"/".to_string() + &operator.name);
-        list_channel_info(dc.unwrap(), operator);
+    if filter.operators.is_some() {
+        for operator in filter.operators.unwrap() {
+            let dc = read_operator_catalog(dir.to_string() + &"/".to_string() + &operator.name);
+            list_channel_info(dc.unwrap(), operator);
+        }
+    } else {
+        // no entry for operators, so traverse through all operators
+        // in the given catalog
+        let paths = fs::read_dir(&dir).unwrap();
+        for path in paths {
+            let entry = path.expect("could not resolve path entry");
+            let dir_name = entry.path();
+            let str_dir = dir_name.into_os_string().into_string().unwrap();
+            let res = str_dir.split("/");
+            let n = format!("{}", res.into_iter().last().unwrap());
+            let dc = read_operator_catalog(str_dir);
+            let operator = Operator {
+                name: n,
+                channel: Some("all".to_string()),
+                from_version: Some("0.0.0".to_string()),
+            };
+            list_channel_info(dc.unwrap(), operator);
+        }
     }
 }
 
 // iterate through object and display values
-pub fn list_channel_info(dc: serde_json::Value, filter: Operator) {
-    let dc: Vec<Channel> = match serde_json::from_value(dc.clone()) {
+pub fn list_channel_info(input: serde_json::Value, filter: Operator) {
+    // parse the Package and Channel parts of the catalog.json
+    let pkg: Vec<Package> = match serde_json::from_value(input.clone()) {
+        Ok(val) => val,
+        Err(error) => panic!("error {}", error),
+    };
+
+    let ch: Vec<Channel> = match serde_json::from_value(input) {
         Ok(val) => val,
         Err(error) => panic!("error {}", error),
     };
@@ -23,6 +49,7 @@ pub fn list_channel_info(dc: serde_json::Value, filter: Operator) {
     // check to see if filter.from_version is valid (or empty)
     let mut current_semver = Version::parse("0.0.0").unwrap();
     let mut current_version = String::from("0.0.0");
+    if current_version != "0.0.0" {}
 
     if filter.from_version.is_some() {
         current_version = filter.from_version.unwrap();
@@ -35,13 +62,18 @@ pub fn list_channel_info(dc: serde_json::Value, filter: Operator) {
         current_channel = filter.channel.unwrap();
     }
 
-    log_ex(&format!("filter version {:?}", current_version));
-    log_ex(&format!("filter semver  {:?}", current_semver));
-    log_ex(&format!("filter channel {:?}", current_channel));
-    log_hi(&format!("operator '{}'", filter.name));
+    //log_ex(&format!("filter version {:?}", current_version));
+    //log_ex(&format!("filter semver  {:?}", current_semver));
+    //log_ex(&format!("filter channel {:?}", current_channel));
+    let package = pkg.into_iter().nth(0).unwrap();
+    log_hi(&format!("operator '{}'", package.name,));
+    log_ex(&format!(
+        "defaultChannel {:?}",
+        package.default_channel.unwrap()
+    ));
 
     // iterate through the dc - look specifically for olm.channel schema
-    for x in dc {
+    for x in ch {
         if x.schema == "olm.channel" {
             if current_channel == x.name || current_channel == "all" {
                 let mut current: Vec<String> = vec![];
@@ -51,12 +83,30 @@ pub fn list_channel_info(dc: serde_json::Value, filter: Operator) {
                 // entries contain all the relevant upgrade path info
                 for y in x.entries.unwrap() {
                     // get the bundle semver
-                    let semver_tmp = y.name.split(".v").nth(1).unwrap();
-                    let bundle_semver = Version::parse(semver_tmp).unwrap();
+                    let mut semver_tmp = String::from("0.0.0");
+                    if semver_tmp != "0.0.0" {}
+                    if y.name.contains(".v") {
+                        semver_tmp = y.name.split(".v").nth(1).unwrap().to_string();
+                    } else {
+                        // the case when we don't have ".v" in the catalog
+                        // oh the joys of giving devs free range :(
+                        // for now we only do major,min,patch,pre and ignore build versions
+                        let n = y.name.split(".").nth(0).unwrap().to_string();
+                        semver_tmp = y
+                            .name
+                            .split(&n)
+                            .nth(1)
+                            .unwrap()
+                            .to_string()
+                            .get(1..)
+                            .unwrap()
+                            .to_string();
+                    }
+                    let bundle_semver = build_semver(semver_tmp);
 
                     let res = current_semver.cmp(&bundle_semver);
                     if res != Ordering::Greater {
-                        log_mid(&format!("  channel name {}", x.name));
+                        //log_mid(&format!("  channel name {}", x.name));
                         current.insert(0, y.name);
                         if y.replaces.is_some() {
                             let val = y.replaces.unwrap();
@@ -77,6 +127,7 @@ pub fn list_channel_info(dc: serde_json::Value, filter: Operator) {
                         }
                     }
                 }
+                log_mid(&format!("  channel name {}", x.name));
                 current.sort_unstable_by(compare_len_alpha);
                 if current.len() > 0 {
                     log_lo(&format!("    upgrade path  {:?}", current));
@@ -99,4 +150,25 @@ fn compare_len_alpha(a: &String, b: &String) -> Ordering {
         return a.cmp(&b);
     }
     return length_test;
+}
+
+// utility to build a more complex semver
+fn build_semver(semver_str: String) -> semver::Version {
+    /*let n = match integer {
+        Some(num)=>match num.parse::<u64>() {
+            Ok(num)=>num,
+            Err(_)=>panic!("Err: Cannot Parse The Integer."),
+        },
+        None=>panic!("Err: Cannot Parse The String."),
+    };*/
+    let p = semver_str.split(".").nth(2).unwrap();
+    let tmp = p.split("-").nth(0).unwrap();
+    let version = Version {
+        major: semver_str.split(".").nth(0).unwrap().parse().unwrap(),
+        minor: semver_str.split(".").nth(1).unwrap().parse().unwrap(),
+        patch: tmp.parse().unwrap(),
+        pre: Prerelease::new(p).unwrap(),
+        build: BuildMetadata::EMPTY,
+    };
+    version
 }

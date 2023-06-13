@@ -112,7 +112,7 @@ pub struct FilterConfig {
     pub catalog: String,
 
     #[serde(rename = "packages")]
-    pub operators: Vec<Operator>,
+    pub operators: Option<Vec<Operator>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -181,9 +181,6 @@ pub struct Package {
 
     #[serde(rename = "defaultChannel")]
     pub default_channel: Option<String>,
-
-    #[serde(rename = "description")]
-    pub description: String,
 }
 
 // Channel used in parsing channel data
