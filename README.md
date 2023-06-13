@@ -30,11 +30,20 @@ Execute the following to copy from a registry
 mkdir -p working-dir/rhopi/blobs/sha256
 cargo build 
 
-# list an operator
-cargo run -- --config imstcfg.yaml --image registry.redhat.io/redhat/redhat-operator-index:v4.12 --filter windows-machine-config-operator
+# create a filter config (this uses the example in this repo)
+kind: FilterConfiguration
+apiVersion: mirror.openshift.io/v1alpha2
+catalog: registry.redhat.io/redhat/redhat-operator-index:v4.13
+packages:
+  - name: aws-load-balancer-operator
+    channel: stable-v1
+    fromVersion: 0.2.0
+
+# execute 
+cargo run -- --config filter-config.yaml 
 ```
 
-## Reference from OLM Update graph documentation
+## Reference : OLM update graph documentation
 
 **Replaces**
 
