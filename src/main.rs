@@ -25,17 +25,14 @@ async fn main() {
     let args = Cli::parse();
     let cfg = args.config.as_ref().unwrap().to_string();
 
-    log_info(&format!(
-        "rust-operator-upgradepath-tool {} {} ",
-        cfg, args.image
-    ));
-
-    let img_ref = parse_image_index(args.image);
+    log_info(&format!("rust-operator-upgradepath-tool {} ", cfg));
 
     // Parse the config serde_yaml::ImageSetConfig.
     let config = load_config(cfg).unwrap();
     let filter_config = parse_yaml_config(config).unwrap();
     log_debug(&format!("{:#?}", filter_config.operators));
+
+    let img_ref = parse_image_index(filter_config.catalog.to_owned());
 
     let manifest_json = get_manifest_json_file(img_ref.name.clone(), img_ref.version.clone());
     let working_dir_blobs = get_blobs_dir(img_ref.name.clone(), img_ref.version.clone());

@@ -97,10 +97,6 @@ pub struct Cli {
     /// config file to use
     #[arg(short, long, value_name = "config", default_value = "")]
     pub config: Option<String>,
-
-    /// image-index to list
-    #[arg(short, long, value_name = "image-index")]
-    pub image: String,
 }
 
 /// config schema
@@ -112,7 +108,10 @@ pub struct FilterConfig {
     #[serde(rename = "apiVersion")]
     pub api_version: String,
 
-    #[serde(rename = "operators")]
+    #[serde(rename = "catalog")]
+    pub catalog: String,
+
+    #[serde(rename = "packages")]
     pub operators: Vec<Operator>,
 }
 
@@ -122,7 +121,7 @@ pub struct Operator {
     pub name: String,
 
     #[serde(rename = "channel")]
-    pub channel: String,
+    pub channel: Option<String>,
 
     #[serde(rename = "fromVersion")]
     pub from_version: Option<String>,

@@ -1,5 +1,7 @@
 kind: FilterConfiguration
 apiVersion: mirror.openshift.io/v1alpha2
-operators:
+catalog: registry.redhat.io/redhat/redhat-operator-index:v4.13
+packages:
   - name: aws-load-balancer-operator
-    channel: stable
+    channel: all
+    fromVersion: 0.0.0

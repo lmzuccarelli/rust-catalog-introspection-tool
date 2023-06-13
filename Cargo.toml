@@ -18,3 +18,4 @@ flate2 = "1.0.25"
 tar = "0.4.38"
 clap = { version = "4.2.4", features = ["derive"] }
 serde_yaml = "0.9.21"
+semver = "1.0.17"
