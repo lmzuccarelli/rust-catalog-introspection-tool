@@ -3,5 +3,5 @@ apiVersion: mirror.openshift.io/v1alpha2
 catalog: registry.redhat.io/redhat/redhat-operator-index:v4.13
 packages:
   - name: aws-load-balancer-operator
-    channel: all
-    fromVersion: 0.0.0
+    channel: stable-v1
+    fromVersion: 0.2.0

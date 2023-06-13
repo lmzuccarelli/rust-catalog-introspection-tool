@@ -22,16 +22,25 @@ pub fn list_channel_info(dc: serde_json::Value, filter: Operator) {
 
     // check to see if filter.from_version is valid (or empty)
     let mut current_semver = Version::parse("0.0.0").unwrap();
-    let current_version = filter.from_version.unwrap();
-    let current_channel = filter.channel.unwrap();
-    if current_version != "0.0.0" {
+    let mut current_version = String::from("0.0.0");
+
+    if filter.from_version.is_some() {
+        current_version = filter.from_version.unwrap();
         current_semver = Version::parse(&current_version).unwrap();
     }
 
-    log_ex(&format!("filter semver {:?}", current_semver));
+    // check to see if filter.channel is valid (or empty)
+    let mut current_channel = String::from("all");
+    if filter.channel.is_some() {
+        current_channel = filter.channel.unwrap();
+    }
+
+    log_ex(&format!("filter version {:?}", current_version));
+    log_ex(&format!("filter semver  {:?}", current_semver));
     log_ex(&format!("filter channel {:?}", current_channel));
     log_hi(&format!("operator '{}'", filter.name));
 
+    // iterate through the dc - look specifically for olm.channel schema
     for x in dc {
         if x.schema == "olm.channel" {
             if current_channel == x.name || current_channel == "all" {
@@ -39,6 +48,7 @@ pub fn list_channel_info(dc: serde_json::Value, filter: Operator) {
                 let mut skip_range: Vec<String> = vec![];
                 let mut skip_tracker: Vec<String> = vec![];
 
+                // entries contain all the relevant upgrade path info
                 for y in x.entries.unwrap() {
                     // get the bundle semver
                     let semver_tmp = y.name.split(".v").nth(1).unwrap();
@@ -47,10 +57,6 @@ pub fn list_channel_info(dc: serde_json::Value, filter: Operator) {
                     let res = current_semver.cmp(&bundle_semver);
                     if res != Ordering::Greater {
                         log_mid(&format!("  channel name {}", x.name));
-                        //log_ex(&format!("    bundle semver {}", bundle_semver));
-                        //log_ex(&format!("    filter semver {}", req));
-                        //log_ex(&format!("    bundle {}", y.name));
-                        //log_ex(&format!("    result {:?}", res));
                         current.insert(0, y.name);
                         if y.replaces.is_some() {
                             let val = y.replaces.unwrap();
