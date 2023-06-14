@@ -37,7 +37,6 @@ async fn main() {
     log.debug(&format!("{:#?}", filter_config.operators));
 
     let img_ref = parse_image_index(log, filter_config.catalog.to_owned());
-
     let manifest_json = get_manifest_json_file(img_ref.name.clone(), img_ref.version.clone());
     let working_dir_blobs = get_blobs_dir(img_ref.name.clone(), img_ref.version.clone());
     let working_dir_cache = get_cache_dir(img_ref.name.clone(), img_ref.version.clone());

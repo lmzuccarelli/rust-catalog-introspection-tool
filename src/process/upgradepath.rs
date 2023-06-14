@@ -65,7 +65,7 @@ pub fn list_channel_info(log: &Logging, input: serde_json::Value, filter: Operat
     let package = pkg.into_iter().nth(0).unwrap();
     log.hi(&format!("operator '{}'", package.name,));
     log.ex(&format!(
-        "defaultChannel {:?}",
+        "  defaultChannel {:?}",
         package.default_channel.unwrap()
     ));
 
@@ -126,9 +126,15 @@ pub fn list_channel_info(log: &Logging, input: serde_json::Value, filter: Operat
                 }
                 log.mid(&format!("  channel name {}", x.name));
                 current.sort_unstable_by(compare_len_alpha);
-                if current.len() > 0 {
-                    log.lo(&format!("    upgrade path  {:?}", current));
+                log.lo("    suggested upgrade path");
+                let mut upgrade_str = String::from(current_version.to_owned());
+                if current_version == "0.0.0" {
+                    upgrade_str = "?".to_string();
                 }
+                for path in current {
+                    upgrade_str = upgrade_str + " -> " + &path;
+                }
+                log.lo(&format!("    from {}", upgrade_str));
                 if skip_range.len() > 0 {
                     skip_range.sort();
                     log.lo(&format!("    skip range {:?}", skip_range));
