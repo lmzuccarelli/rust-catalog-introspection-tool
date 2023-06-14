@@ -6,11 +6,11 @@ use std::cmp::*;
 use std::fs;
 
 // list all components in the current operator image index
-pub async fn list_components(dir: String, filter: FilterConfig) {
+pub async fn list_components(log: &Logging, dir: String, filter: FilterConfig) {
     if filter.operators.is_some() {
         for operator in filter.operators.unwrap() {
             let dc = read_operator_catalog(dir.to_string() + &"/".to_string() + &operator.name);
-            list_channel_info(dc.unwrap(), operator);
+            list_channel_info(log, dc.unwrap(), operator);
         }
     } else {
         // no entry for operators, so traverse through all operators
@@ -28,13 +28,13 @@ pub async fn list_components(dir: String, filter: FilterConfig) {
                 channel: Some("all".to_string()),
                 from_version: Some("0.0.0".to_string()),
             };
-            list_channel_info(dc.unwrap(), operator);
+            list_channel_info(log, dc.unwrap(), operator);
         }
     }
 }
 
 // iterate through object and display values
-pub fn list_channel_info(input: serde_json::Value, filter: Operator) {
+pub fn list_channel_info(log: &Logging, input: serde_json::Value, filter: Operator) {
     // parse the Package and Channel parts of the catalog.json
     let pkg: Vec<Package> = match serde_json::from_value(input.clone()) {
         Ok(val) => val,
@@ -49,7 +49,7 @@ pub fn list_channel_info(input: serde_json::Value, filter: Operator) {
     // check to see if filter.from_version is valid (or empty)
     let mut current_semver = Version::parse("0.0.0").unwrap();
     let mut current_version = String::from("0.0.0");
-    if current_version != "0.0.0" {}
+    log.trace(&format!("current version {}", current_version));
 
     if filter.from_version.is_some() {
         current_version = filter.from_version.unwrap();
@@ -62,12 +62,9 @@ pub fn list_channel_info(input: serde_json::Value, filter: Operator) {
         current_channel = filter.channel.unwrap();
     }
 
-    //log_ex(&format!("filter version {:?}", current_version));
-    //log_ex(&format!("filter semver  {:?}", current_semver));
-    //log_ex(&format!("filter channel {:?}", current_channel));
     let package = pkg.into_iter().nth(0).unwrap();
-    log_hi(&format!("operator '{}'", package.name,));
-    log_ex(&format!(
+    log.hi(&format!("operator '{}'", package.name,));
+    log.ex(&format!(
         "defaultChannel {:?}",
         package.default_channel.unwrap()
     ));
@@ -127,14 +124,14 @@ pub fn list_channel_info(input: serde_json::Value, filter: Operator) {
                         }
                     }
                 }
-                log_mid(&format!("  channel name {}", x.name));
+                log.mid(&format!("  channel name {}", x.name));
                 current.sort_unstable_by(compare_len_alpha);
                 if current.len() > 0 {
-                    log_lo(&format!("    upgrade path  {:?}", current));
+                    log.lo(&format!("    upgrade path  {:?}", current));
                 }
                 if skip_range.len() > 0 {
                     skip_range.sort();
-                    log_lo(&format!("    skip range {:?}", skip_range));
+                    log.lo(&format!("    skip range {:?}", skip_range));
                 }
             }
         }
@@ -154,13 +151,6 @@ fn compare_len_alpha(a: &String, b: &String) -> Ordering {
 
 // utility to build a more complex semver
 fn build_semver(semver_str: String) -> semver::Version {
-    /*let n = match integer {
-        Some(num)=>match num.parse::<u64>() {
-            Ok(num)=>num,
-            Err(_)=>panic!("Err: Cannot Parse The Integer."),
-        },
-        None=>panic!("Err: Cannot Parse The String."),
-    };*/
     let p = semver_str.split(".").nth(2).unwrap();
     let tmp = p.split("-").nth(0).unwrap();
     let version = Version {

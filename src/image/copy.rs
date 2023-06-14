@@ -31,9 +31,15 @@ pub async fn get_manifest(
     Ok(body)
 }
 
-// get each blob referred to by the vector in parallel 
+// get each blob referred to by the vector in parallel
 // set by the PARALLEL_REQUESTS value
-pub async fn get_blobs(url: String, token: String, layers: Vec<FsLayer>, dir: String) {
+pub async fn get_blobs(
+    log: &Logging,
+    url: String,
+    token: String,
+    layers: Vec<FsLayer>,
+    dir: String,
+) {
     const PARALLEL_REQUESTS: usize = 8;
 
     let inner_dir = &dir;
@@ -68,28 +74,28 @@ pub async fn get_blobs(url: String, token: String, layers: Vec<FsLayer>, dir: St
                         fs::write(inner_dir.to_owned() + &blob, bytes.clone())
                             .expect("unable to write blob");
                         let msg = format!("writing blob {}", blob);
-                        log_info(&msg);
+                        log.info(&msg);
                     }
                     Err(_) => {
                         let msg = format!("reading blob {}", &blob);
-                        log_error(&msg);
+                        log.error(&msg);
                     }
                 },
                 Err(_) => {
                     let msg = format!("downloading blob {}", &blob);
-                    log_error(&msg);
+                    log.error(&msg);
                 }
             }
         }
     }))
     .buffer_unordered(PARALLEL_REQUESTS)
     .collect::<Vec<()>>();
-    log_info("downloading blobs...");
+    log.info("downloading blobs...");
     fetches.await;
 }
 
 // untar layers in directory denoted by parameter 'dir'
-pub async fn untar_layers(dir: String) {
+pub async fn untar_layers(log: &Logging, dir: String) {
     // change to the blobs/sha256 directory
     let current_dir = env::current_dir().unwrap();
     env::set_current_dir(&dir).expect("could not set current directory");
@@ -103,13 +109,13 @@ pub async fn untar_layers(dir: String) {
         let mut archive = Archive::new(tar);
         // should always be a sha256 string
         let tar_dir = file.into_os_string().into_string().unwrap();
-        log_info(&format!("untarring file {} ", &tar_dir[2..8]));
+        log.info(&format!("untarring file {} ", &tar_dir[2..8]));
         // we are really interested in either the configs or release-images directories
         match archive.unpack("../../cache/".to_string() + &tar_dir[2..8]) {
             Ok(arch) => arch,
             Err(error) => {
                 let msg = format!("skipping this error : {} ", &error.to_string());
-                log_warn(&msg);
+                log.warn(&msg);
             }
         };
     }
@@ -117,7 +123,7 @@ pub async fn untar_layers(dir: String) {
 }
 
 // parse_image_index - best attempt to parse image index
-pub fn parse_image_index(image: String) -> ImageReference {
+pub fn parse_image_index(log: &Logging, image: String) -> ImageReference {
     let mut img = image.split(":");
     let index = img.nth(0).unwrap();
     let mut img_ref = index.split("/");
@@ -128,7 +134,7 @@ pub fn parse_image_index(image: String) -> ImageReference {
         name: img_ref.nth(0).unwrap().to_string(),
         version: ver.to_string(),
     };
-    log_info(&format!("{:#?}", ir));
+    log.info(&format!("{:#?}", ir));
     ir
 }
 

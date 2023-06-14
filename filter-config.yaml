@@ -4,4 +4,6 @@ catalog: registry.redhat.io/redhat/redhat-operator-index:v4.13
 packages:
   - name: aws-load-balancer-operator
     channel: stable-v1
-    fromVersion: 0.2.0
+    fromVersion: 0.0.0
+  - name: serverless-operator
+  - name: rhpam-kogito-operator

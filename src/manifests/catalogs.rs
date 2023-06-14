@@ -31,7 +31,7 @@ pub fn read_operator_catalog(path: String) -> Result<serde_json::Value, Box<dyn 
 }
 
 // find a specifc directory in the untar layers
-pub async fn find_dir(dir: String, name: String) -> String {
+pub async fn find_dir(log: &Logging, dir: String, name: String) -> String {
     // env::set_current_dir("../../../../").expect("could not set current directory");
     let paths = fs::read_dir(&dir);
     // for both release & operator image indexes
@@ -56,7 +56,7 @@ pub async fn find_dir(dir: String, name: String) -> String {
         }
         Err(error) => {
             let msg = format!("{} ", error);
-            log_warn(&msg);
+            log.warn(&msg);
         }
     }
     return "".to_string();

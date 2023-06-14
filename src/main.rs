@@ -25,14 +25,18 @@ async fn main() {
     let args = Cli::parse();
     let cfg = args.config.as_ref().unwrap().to_string();
 
-    log_info(&format!("rust-operator-upgradepath-tool {} ", cfg));
+    let log = &Logging {
+        log_level: Level::INFO,
+    };
+
+    log.info(&format!("rust-operator-upgradepath-tool {} ", cfg));
 
     // Parse the config serde_yaml::ImageSetConfig.
     let config = load_config(cfg).unwrap();
     let filter_config = parse_yaml_config(config).unwrap();
-    log_debug(&format!("{:#?}", filter_config.operators));
+    log.debug(&format!("{:#?}", filter_config.operators));
 
-    let img_ref = parse_image_index(filter_config.catalog.to_owned());
+    let img_ref = parse_image_index(log, filter_config.catalog.to_owned());
 
     let manifest_json = get_manifest_json_file(img_ref.name.clone(), img_ref.version.clone());
     let working_dir_blobs = get_blobs_dir(img_ref.name.clone(), img_ref.version.clone());
@@ -52,27 +56,34 @@ async fn main() {
         fs::write(manifest_json, manifest.clone()).expect("unable to write file");
         let res = parse_json_manifest(manifest).unwrap();
         let blobs_url = get_blobs_url(img_ref.clone());
-        get_blobs(blobs_url, token, res.fs_layers, working_dir_blobs.clone()).await;
-        log_info("completed image index download");
+        get_blobs(
+            log,
+            blobs_url,
+            token,
+            res.fs_layers,
+            working_dir_blobs.clone(),
+        )
+        .await;
+        log.info("completed image index download");
     } else {
-        log_info("catalog index exists nothing to do");
+        log.info("catalog index exists nothing to do");
     }
     // check if the cache directory exists
     if !Path::new(&working_dir_cache).exists() {
         // create the cache directory
         fs::create_dir_all(&working_dir_cache).expect("unable to create directory");
-        untar_layers(working_dir_blobs.clone()).await;
-        log_info("completed untar of layers");
+        untar_layers(log, working_dir_blobs.clone()).await;
+        log.info("completed untar of layers");
     } else {
-        log_info("cache exists nothing to do");
+        log.info("cache exists nothing to do");
     }
 
-    let dir = find_dir(working_dir_cache.clone(), "configs".to_string()).await;
-    log_info(&format!("full path for directory 'configs' {} ", &dir));
+    let dir = find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;
+    log.info(&format!("full path for directory 'configs' {} ", &dir));
     if dir != "" {
-        list_components(dir, filter_config).await;
+        list_components(log, dir, filter_config).await;
     } else {
-        log_error("configs directory not found");
+        log.error("configs directory not found");
     }
 }
 
