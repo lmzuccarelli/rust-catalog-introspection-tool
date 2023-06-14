@@ -26,7 +26,7 @@ async fn main() {
     let cfg = args.config.as_ref().unwrap().to_string();
 
     let log = &Logging {
-        log_level: Level::INFO,
+        log_level: Level::DEBUG,
     };
 
     log.info(&format!("rust-operator-upgradepath-tool {} ", cfg));
