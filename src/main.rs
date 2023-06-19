@@ -65,7 +65,7 @@ async fn main() {
         .await;
         log.info("completed image index download");
     } else {
-        log.info("catalog index exists nothing to do");
+        log.info("catalog index exists - no further processing required");
     }
     // check if the cache directory exists
     if !Path::new(&working_dir_cache).exists() {
@@ -74,7 +74,7 @@ async fn main() {
         untar_layers(log, working_dir_blobs.clone()).await;
         log.info("completed untar of layers");
     } else {
-        log.info("cache exists nothing to do");
+        log.info("cache exists no further processing required");
     }
 
     let dir = find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;
