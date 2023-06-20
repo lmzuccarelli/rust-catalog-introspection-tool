@@ -6,19 +6,20 @@ use tokio;
 // define modules
 mod api;
 mod auth;
+mod calculate;
 mod config;
 mod image;
 mod log;
 mod manifests;
-mod process;
 
 use api::schema::*;
 use auth::credentials::*;
+use calculate::upgradepath::*;
 use config::read::*;
 use image::copy::*;
 use log::logging::*;
 use manifests::catalogs::*;
-use process::upgradepath::*;
+use std::process;
 
 #[tokio::main]
 async fn main() {
@@ -36,53 +37,71 @@ async fn main() {
     let filter_config = parse_yaml_config(config).unwrap();
     log.debug(&format!("{:#?}", filter_config.operators));
 
-    let img_ref = parse_image_index(log, filter_config.catalog.to_owned());
-    let manifest_json = get_manifest_json_file(img_ref.name.clone(), img_ref.version.clone());
-    let working_dir_blobs = get_blobs_dir(img_ref.name.clone(), img_ref.version.clone());
-    let working_dir_cache = get_cache_dir(img_ref.name.clone(), img_ref.version.clone());
-
-    // check if the directory exists
-    if !Path::new(&working_dir_blobs).exists() {
-        let token = get_token(img_ref.registry.clone()).await;
-        // use token to get manifest
-        let manifest_url = get_image_manifest_url(img_ref.clone());
-        let manifest = get_manifest(manifest_url.clone(), token.clone())
-            .await
-            .unwrap();
-
-        // create the full path
-        fs::create_dir_all(working_dir_blobs.clone()).expect("unable to create directory");
-        fs::write(manifest_json, manifest.clone()).expect("unable to write file");
-        let res = parse_json_manifest(manifest).unwrap();
-        let blobs_url = get_blobs_url(img_ref.clone());
-        get_blobs(
-            log,
-            blobs_url,
-            token,
-            res.fs_layers,
-            working_dir_blobs.clone(),
-        )
-        .await;
-        log.info("completed image index download");
-    } else {
-        log.info("catalog index exists - no further processing required");
-    }
-    // check if the cache directory exists
-    if !Path::new(&working_dir_cache).exists() {
-        // create the cache directory
-        fs::create_dir_all(&working_dir_cache).expect("unable to create directory");
-        untar_layers(log, working_dir_blobs.clone()).await;
-        log.info("completed untar of layers");
-    } else {
-        log.info("cache exists no further processing required");
+    // verify catalog images
+    let mut imgs: Vec<String> = vec![];
+    for img in filter_config.catalogs.clone() {
+        let i = img.split(":").nth(0).unwrap().to_string();
+        if !imgs.contains(&i) {
+            imgs.insert(0, i);
+        }
     }
 
-    let dir = find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;
-    log.info(&format!("full path for directory 'configs' {} ", &dir));
-    if dir != "" {
-        list_components(log, dir, filter_config).await;
-    } else {
-        log.error("configs directory not found");
+    if imgs.len() > 1 {
+        log.error("catalog images are expected to be the same (except for versions)");
+        process::exit(1);
+    }
+
+    let img_ref = parse_image_index(log, filter_config.catalogs.clone());
+    for ir in img_ref {
+        let manifest_json = get_manifest_json_file(ir.name.clone(), ir.version.clone());
+        let working_dir_blobs = get_blobs_dir(ir.name.clone(), ir.version.clone());
+        let working_dir_cache = get_cache_dir(ir.name.clone(), ir.version.clone());
+
+        // check if the directory exists
+        if !Path::new(&working_dir_blobs).exists() {
+            let token = get_token(ir.registry.clone()).await;
+            // use token to get manifest
+            let manifest_url = get_image_manifest_url(ir.clone());
+            let manifest = get_manifest(manifest_url.clone(), token.clone())
+                .await
+                .unwrap();
+
+            // create the full path
+            fs::create_dir_all(working_dir_blobs.clone()).expect("unable to create directory");
+            fs::write(manifest_json, manifest.clone()).expect("unable to write file");
+            let res = parse_json_manifest(manifest).unwrap();
+            let blobs_url = get_blobs_url(ir.clone());
+            get_blobs(
+                log,
+                blobs_url,
+                token,
+                res.fs_layers,
+                working_dir_blobs.clone(),
+            )
+            .await;
+            log.info("completed image index download");
+        } else {
+            log.info("catalog index exists - no further processing required");
+        }
+        // check if the cache directory exists
+        if !Path::new(&working_dir_cache).exists() {
+            // create the cache directory
+            fs::create_dir_all(&working_dir_cache).expect("unable to create directory");
+            untar_layers(log, working_dir_blobs.clone()).await;
+            log.info("completed untar of layers");
+        } else {
+            log.info("cache exists no further processing required");
+        }
+
+        let dir = find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;
+        log.info(&format!("full path for directory 'configs' {} ", &dir));
+        log.hi(&format!("catalog {:?}", ir));
+        if dir != "" {
+            list_components(log, dir, filter_config.clone()).await;
+        } else {
+            log.error("configs directory not found");
+        }
+        println!("");
     }
 }
 

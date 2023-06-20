@@ -100,7 +100,7 @@ pub struct Cli {
 }
 
 /// config schema
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FilterConfig {
     #[serde(rename = "kind")]
     pub kind: String,
@@ -108,14 +108,14 @@ pub struct FilterConfig {
     #[serde(rename = "apiVersion")]
     pub api_version: String,
 
-    #[serde(rename = "catalog")]
-    pub catalog: String,
+    #[serde(rename = "catalogs")]
+    pub catalogs: Vec<String>,
 
     #[serde(rename = "packages")]
     pub operators: Option<Vec<Operator>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Operator {
     #[serde(rename = "name")]
     pub name: String,

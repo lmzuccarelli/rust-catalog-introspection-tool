@@ -123,19 +123,23 @@ pub async fn untar_layers(log: &Logging, dir: String) {
 }
 
 // parse_image_index - best attempt to parse image index
-pub fn parse_image_index(log: &Logging, image: String) -> ImageReference {
-    let mut img = image.split(":");
-    let index = img.nth(0).unwrap();
-    let mut img_ref = index.split("/");
-    let ver = img.nth(0).unwrap();
-    let ir = ImageReference {
-        registry: img_ref.nth(0).unwrap().to_string(),
-        namespace: img_ref.nth(0).unwrap().to_string(),
-        name: img_ref.nth(0).unwrap().to_string(),
-        version: ver.to_string(),
-    };
-    log.info(&format!("{:#?}", ir));
-    ir
+pub fn parse_image_index(log: &Logging, images: Vec<String>) -> Vec<ImageReference> {
+    let mut image_refs = vec![];
+    for img in images {
+        let mut i = img.split(":");
+        let index = i.nth(0).unwrap();
+        let mut hld = index.split("/");
+        let ver = i.nth(0).unwrap();
+        let ir = ImageReference {
+            registry: hld.nth(0).unwrap().to_string(),
+            namespace: hld.nth(0).unwrap().to_string(),
+            name: hld.nth(0).unwrap().to_string(),
+            version: ver.to_string(),
+        };
+        log.info(&format!("{:#?}", img));
+        image_refs.insert(0, ir);
+    }
+    image_refs
 }
 
 // contruct the manifest url
