@@ -90,7 +90,7 @@ async fn main() {
             untar_layers(log, working_dir_blobs.clone()).await;
             log.info("completed untar of layers");
         } else {
-            log.info("cache exists no further processing required");
+            log.info("cache exists - no further processing required");
         }
 
         let dir = find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;

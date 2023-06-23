@@ -136,7 +136,7 @@ pub fn parse_image_index(log: &Logging, images: Vec<String>) -> Vec<ImageReferen
             name: hld.nth(0).unwrap().to_string(),
             version: ver.to_string(),
         };
-        log.info(&format!("{:#?}", img));
+        log.debug(&format!("image reference {:#?}", img));
         image_refs.insert(0, ir);
     }
     image_refs
