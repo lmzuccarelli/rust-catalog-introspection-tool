@@ -1,9 +1,11 @@
+// use modules
 use clap::Parser;
 use std::fs;
 use std::path::Path;
+use std::process;
 use tokio;
 
-// define modules
+// define local modules
 mod api;
 mod auth;
 mod calculate;
@@ -12,6 +14,7 @@ mod image;
 mod log;
 mod manifests;
 
+// use local modules
 use api::schema::*;
 use auth::credentials::*;
 use calculate::upgradepath::*;
@@ -19,8 +22,8 @@ use config::read::*;
 use image::copy::*;
 use log::logging::*;
 use manifests::catalogs::*;
-use std::process;
 
+// main entry point (use async)
 #[tokio::main]
 async fn main() {
     let args = Cli::parse();
@@ -32,7 +35,7 @@ async fn main() {
 
     log.info(&format!("rust-operator-upgradepath-tool {} ", cfg));
 
-    // Parse the config serde_yaml::ImageSetConfig.
+    // Parse the config serde_yaml::FilterConfiguration.
     let config = load_config(cfg).unwrap();
     let filter_config = parse_yaml_config(config).unwrap();
     log.debug(&format!("{:#?}", filter_config.operators));
@@ -46,11 +49,13 @@ async fn main() {
         }
     }
 
+    // quick check - catalog images must be greater than one
     if imgs.len() > 1 {
         log.error("catalog images are expected to be the same (except for versions)");
         process::exit(1);
     }
 
+    // parse the config - iterate through each catalog
     let img_ref = parse_image_index(log, filter_config.catalogs.clone());
     for ir in img_ref {
         let manifest_json = get_manifest_json_file(ir.name.clone(), ir.version.clone());
@@ -71,6 +76,7 @@ async fn main() {
             fs::write(manifest_json, manifest.clone()).expect("unable to write file");
             let res = parse_json_manifest(manifest).unwrap();
             let blobs_url = get_blobs_url(ir.clone());
+            // use a concurrent process to get related blobs
             get_blobs(
                 log,
                 blobs_url,
@@ -93,10 +99,12 @@ async fn main() {
             log.info("cache exists - no further processing required");
         }
 
+        // find the directory 'configs'
         let dir = find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;
         log.info(&format!("full path for directory 'configs' {} ", &dir));
         log.hi(&format!("catalog {:?}", ir));
         if dir != "" {
+            // list all components wrt filter input
             list_components(log, dir, filter_config.clone()).await;
         } else {
             log.error("configs directory not found");
@@ -105,8 +113,7 @@ async fn main() {
     }
 }
 
-// utility functions
-// get_manifest_json
+// utility functions - get_manifest_json
 fn get_manifest_json_file(name: String, version: String) -> String {
     let mut file = String::from("working-dir/");
     file.push_str(&name);

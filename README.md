@@ -6,7 +6,7 @@ and then traverses these catalogs to make a best effort upgrade path for a speci
 ## Use Case
 
 A typical use case could be:
-- Work with catalog i.e registry.redhat.io/redhat/redhat-operator-index:v4.11
+- Work with catalog i.e registry.redhat.io/redhat/redhat-operator-index:v4.12
 - Via cli find the upgrade path for a specific operator
 - Add more functionality i.e as an option use a specifc channel
 
@@ -24,7 +24,8 @@ Clone this repo
 
 Ensure that you have the correct permissions set in the $XDG_RUNTIME_DIR/containers/auth.json file
 
-Execute the following to copy from a registry
+Execute the following to copy and calculate upgrade paths for several
+catalogs and specific packages
 
 ```bash
 mkdir -p working-dir/rhopi/blobs/sha256
@@ -33,7 +34,9 @@ cargo build
 # create a filter config (this uses the example in this repo)
 kind: FilterConfiguration
 apiVersion: mirror.openshift.io/v1alpha2
-catalog: registry.redhat.io/redhat/redhat-operator-index:v4.13
+catalogs: 
+- registry.redhat.io/redhat/redhat-operator-index:v4.12
+- registry.redhat.io/redhat/redhat-operator-index:v4.13
 packages:
   - name: aws-load-balancer-operator
     channel: stable-v1
