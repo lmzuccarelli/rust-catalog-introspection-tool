@@ -1,6 +1,7 @@
 kind: FilterConfiguration
 apiVersion: mirror.openshift.io/v1alpha2
 catalogs: 
+  - registry.redhat.io/redhat/redhat-operator-index:v4.14
   - registry.redhat.io/redhat/redhat-operator-index:v4.13
   - registry.redhat.io/redhat/redhat-operator-index:v4.12
 
@@ -10,3 +11,5 @@ packages:
     fromVersion: 0.2.0
   - name: serverless-operator
   - name: rhpam-kogito-operator
+  - name: jaeger-product
+  - name: 3scale-operator

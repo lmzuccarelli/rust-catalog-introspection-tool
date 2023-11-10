@@ -28,10 +28,16 @@ use manifests::catalogs::*;
 async fn main() {
     let args = Cli::parse();
     let cfg = args.config.as_ref().unwrap().to_string();
+    let lvl = args.loglevel.as_ref().unwrap();
 
-    let log = &Logging {
-        log_level: Level::DEBUG,
+    let l = match lvl.as_str() {
+        "info" => Level::INFO,
+        "debug" => Level::DEBUG,
+        "trace" => Level::TRACE,
+        _ => Level::INFO,
     };
+
+    let log = &Logging { log_level: l };
 
     log.info(&format!("rust-operator-upgradepath-tool {} ", cfg));
 

@@ -97,6 +97,9 @@ pub struct Cli {
     /// config file to use
     #[arg(short, long, value_name = "config", default_value = "")]
     pub config: Option<String>,
+
+    #[arg(short, long, value_name = "loglevel", default_value = "info")]
+    pub loglevel: Option<String>,
 }
 
 /// config schema
@@ -200,7 +203,7 @@ pub struct Channel {
 }
 
 // ChannelEntry used in the Channel struct
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChannelEntry {
     #[serde(rename = "name")]
     pub name: String,
