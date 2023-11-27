@@ -17,6 +17,8 @@ I used a simple approach - Occam's razor
 - A scientific and philosophical rule that entities should not be multiplied unnecessarily (KISS)
 - Worked with a v2 images for the POC
 
+[![asciicast](https://asciinema.org/a/gxdY9uyvd3WxhKVhD4PPfguUx.svg)](https://asciinema.org/a/gxdY9uyvd3WxhKVhD4PPfguUx)
+
 
 ## Usage
 
