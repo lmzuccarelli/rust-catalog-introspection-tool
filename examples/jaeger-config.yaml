@@ -1,0 +1,10 @@
+kind: FilterConfiguration
+apiVersion: mirror.openshift.io/v1alpha2
+catalogs: 
+  - registry.redhat.io/redhat/redhat-operator-index:v4.14
+  - registry.redhat.io/redhat/redhat-operator-index:v4.13
+  - registry.redhat.io/redhat/redhat-operator-index:v4.12
+
+packages:
+  - name: jaeger-product
+    fromVersion: 1.42.0-5 

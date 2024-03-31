@@ -1,5 +1,6 @@
-// use modules
 use clap::Parser;
+use custom_logger::*;
+use mirror_copy::*;
 use std::fs;
 use std::path::Path;
 use std::process;
@@ -7,28 +8,24 @@ use tokio;
 
 // define local modules
 mod api;
-mod auth;
 mod calculate;
 mod config;
-mod image;
-mod log;
-mod manifests;
+mod operator;
 
 // use local modules
 use api::schema::*;
-use auth::credentials::*;
 use calculate::upgradepath::*;
 use config::read::*;
-use image::copy::*;
-use log::logging::*;
-use manifests::catalogs::*;
+use operator::collector::*;
 
 // main entry point (use async)
 #[tokio::main]
 async fn main() {
     let args = Cli::parse();
+
     let cfg = args.config.as_ref().unwrap().to_string();
     let lvl = args.loglevel.as_ref().unwrap();
+    let skip_update = args.skip_update.as_ref().unwrap();
 
     let l = match lvl.as_str() {
         "info" => Level::INFO,
@@ -38,8 +35,10 @@ async fn main() {
     };
 
     let log = &Logging { log_level: l };
-
-    log.info(&format!("rust-operator-upgradepath-tool {} ", cfg));
+    if cfg == "" {
+        log.error("config file is required");
+        process::exit(1);
+    }
 
     // Parse the config serde_yaml::FilterConfiguration.
     let config = load_config(cfg).unwrap();
@@ -61,93 +60,29 @@ async fn main() {
         process::exit(1);
     }
 
-    // parse the config - iterate through each catalog
-    let img_ref = parse_image_index(log, filter_config.catalogs.clone());
-    for ir in img_ref {
-        let manifest_json = get_manifest_json_file(ir.name.clone(), ir.version.clone());
-        let working_dir_blobs = get_blobs_dir(ir.name.clone(), ir.version.clone());
-        let working_dir_cache = get_cache_dir(ir.name.clone(), ir.version.clone());
+    // initialize the client request interface
+    let reg_con = ImplRegistryInterface {};
 
-        // check if the directory exists
-        if !Path::new(&working_dir_blobs).exists() {
-            let token = get_token(ir.registry.clone()).await;
-            // use token to get manifest
-            let manifest_url = get_image_manifest_url(ir.clone());
-            let manifest = get_manifest(manifest_url.clone(), token.clone())
-                .await
-                .unwrap();
-
-            // create the full path
-            fs::create_dir_all(working_dir_blobs.clone()).expect("unable to create directory");
-            fs::write(manifest_json, manifest.clone()).expect("unable to write file");
-            let res = parse_json_manifest(manifest).unwrap();
-            let blobs_url = get_blobs_url(ir.clone());
-            // use a concurrent process to get related blobs
-            get_blobs(
-                log,
-                blobs_url,
-                token,
-                res.fs_layers,
-                working_dir_blobs.clone(),
-            )
-            .await;
-            log.info("completed image index download");
-        } else {
-            log.info("catalog index exists - no further processing required");
+    // check for catalog images
+    if filter_config.catalogs.len() > 0 && !skip_update {
+        fs::create_dir_all("working-dir").expect("unable to create directory");
+        // quickly convert to Operator struct
+        let mut operators = vec![];
+        for op in filter_config.catalogs.clone() {
+            let o = mirror_config::Operator {
+                catalog: op.clone(),
+                packages: None,
+            };
+            operators.insert(0, o);
         }
-        // check if the cache directory exists
-        if !Path::new(&working_dir_cache).exists() {
-            // create the cache directory
-            fs::create_dir_all(&working_dir_cache).expect("unable to create directory");
-            untar_layers(log, working_dir_blobs.clone()).await;
-            log.info("completed untar of layers");
-        } else {
-            log.info("cache exists - no further processing required");
-        }
-
-        // find the directory 'configs'
-        let dir = find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;
-        log.info(&format!("full path for directory 'configs' {} ", &dir));
-        log.hi(&format!("catalog {:?}", ir));
-        if dir != "" {
-            // list all components wrt filter input
-            list_components(log, dir, filter_config.clone()).await;
-        } else {
-            log.error("configs directory not found");
-        }
-        println!("");
+        get_operator_catalog(
+            reg_con.clone(),
+            log,
+            String::from("./working-dir/"),
+            operators,
+        )
+        .await;
     }
-}
 
-// utility functions - get_manifest_json
-fn get_manifest_json_file(name: String, version: String) -> String {
-    let mut file = String::from("working-dir/");
-    file.push_str(&name);
-    file.push_str(&"/");
-    file.push_str(&version);
-    file.push_str(&"/");
-    file.push_str(&"manifest.json");
-    file
-}
-
-// get_blobs_dir
-fn get_blobs_dir(name: String, version: String) -> String {
-    let mut file = String::from("working-dir/");
-    file.push_str(&name);
-    file.push_str(&"/");
-    file.push_str(&version);
-    file.push_str(&"/");
-    file.push_str(&"blobs/sha256/");
-    file
-}
-
-// get_cache_dir
-fn get_cache_dir(name: String, version: String) -> String {
-    let mut file = String::from("working-dir/");
-    file.push_str(&name);
-    file.push_str(&"/");
-    file.push_str(&version);
-    file.push_str(&"/");
-    file.push_str(&"cache");
-    file
+    list_components(log, String::from("./working-dir/"), filter_config.clone()).await;
 }
