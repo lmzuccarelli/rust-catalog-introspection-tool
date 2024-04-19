@@ -1,4 +1,5 @@
 use crate::api::schema::*;
+use crate::isc::generate::*;
 use custom_logger::*;
 use mirror_catalog::*;
 use semver::{BuildMetadata, Prerelease, Version};
@@ -173,10 +174,24 @@ pub fn list_channel_info(
             if current_version == "0.0.0" {
                 upgrade_str = "?".to_string();
             }
+
             for p in updated.iter() {
                 upgrade_str = upgrade_str + " -> " + &p.name;
                 if p.skip_range.is_some() {
                     skip_range = skip_range + " : " + &p.skip_range.clone().unwrap();
+                }
+                // auto generate isc only for default channel for now
+                if k.contains(&default_channel) {
+                    let mut isc = IscV3Alpha1::new();
+                    let mut catalog = Catalog::default();
+                    let mut package = Package::default();
+                    let mut bundle = Bundle::default();
+                    bundle.name = p.name.clone();
+                    package.bundles.push(bundle);
+                    catalog.packages.push(package);
+                    isc.operators.push(catalog);
+                    let yaml = isc.to_yaml();
+                    log.trace(&format!("    {}", yaml));
                 }
             }
             log.hi(&format!("    from {}", upgrade_str));

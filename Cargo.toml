@@ -1,5 +1,5 @@
 [package]
-name = "rust-upgradepath-tool"
+name = "rust-catalog-introspection-tool"
 version = "0.1.0"
 edition = "2021"
 

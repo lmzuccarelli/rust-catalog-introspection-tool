@@ -5,10 +5,10 @@ use serde_derive::Serialize;
 
 /// rust-container-tool cli struct
 #[derive(Parser, Debug)]
-#[command(name = "rust-operator-upgradepath-tool")]
+#[command(name = "rust-operator-introspection-tool")]
 #[command(author = "Luigi Mario Zuccarelli <luzuccar@redhat.com>")]
 #[command(version = "0.0.1")]
-#[command(about = "Used to calcluate an upgrade path (heuristic approach) for a given (list) of operators", long_about = None)]
+#[command(about = "Used to calcluate an upgrade path (heuristic approach) for a given (list) of operators and generate appropriate imagesetconfig yaml files", long_about = None)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     /// config file to use
