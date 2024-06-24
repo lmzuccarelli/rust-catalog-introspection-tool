@@ -13,7 +13,7 @@ use serde_derive::Serialize;
 pub struct Cli {
     /// config file to use
     #[arg(short, long, value_name = "config")]
-    pub config: Option<String>,
+    pub config: String,
 
     #[arg(
         value_enum,
@@ -21,7 +21,7 @@ pub struct Cli {
         long,
         value_name = "loglevel",
         default_value = "info",
-        help = "set the log level [possible values: info, debug, trace]"
+        help = "Set the log level [possible values: info, debug, trace]"
     )]
     pub loglevel: Option<String>,
 
@@ -30,9 +30,36 @@ pub struct Cli {
         long,
         value_name = "skip-update",
         default_value = "false",
-        help = "if set will skip the catalog update check"
+        help = "If set will skip the catalog update check"
     )]
     pub skip_update: Option<bool>,
+
+    #[arg(
+        short,
+        long,
+        value_name = "working-dir",
+        default_value = "",
+        help = "Sets the working-dir, used to share existing caches with other catalog tooling"
+    )]
+    pub working_dir: String,
+
+    #[arg(
+        short,
+        long,
+        value_name = "api-version",
+        default_value = "v2alpha1",
+        help = "Sets the api version for the imagesetconfig"
+    )]
+    pub api_version: String,
+
+    #[arg(
+        short,
+        long,
+        value_name = "output-dir",
+        default_value = "artifacts",
+        help = "The directory to output the auto-generated imagesetconfig to"
+    )]
+    pub output_dir: String,
 }
 
 /// config schema

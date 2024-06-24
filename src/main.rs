@@ -24,9 +24,12 @@ use operator::collector::*;
 async fn main() {
     let args = Cli::parse();
 
-    let cfg = args.config.as_ref().unwrap().to_string();
+    let cfg = args.config.to_string();
+    let working_dir = args.working_dir.to_string();
     let lvl = args.loglevel.as_ref().unwrap();
     let skip_update = args.skip_update.as_ref().unwrap();
+    let api_version = args.api_version.to_string();
+    let output_dir = args.output_dir.to_string();
 
     let l = match lvl.as_str() {
         "info" => Level::INFO,
@@ -40,6 +43,9 @@ async fn main() {
         log.error("config file is required");
         process::exit(1);
     }
+
+    // create artifacts directory
+    fs::create_dir_all(output_dir.clone()).expect("should create artifacts directory");
 
     // Parse the config serde_yaml::FilterConfiguration.
     let config = load_config(cfg).unwrap();
@@ -66,7 +72,7 @@ async fn main() {
 
     // check for catalog images
     if filter_config.catalogs.len() > 0 && !skip_update {
-        fs::create_dir_all("working-dir").expect("unable to create directory");
+        fs::create_dir_all(&working_dir).expect("unable to create working directory");
         // quickly convert to Operator struct
         let mut operators = vec![];
         for op in filter_config.catalogs.clone() {
@@ -76,14 +82,15 @@ async fn main() {
             };
             operators.insert(0, o);
         }
-        get_operator_catalog(
-            reg_con.clone(),
-            log,
-            String::from("./working-dir/"),
-            operators,
-        )
-        .await;
+        get_operator_catalog(reg_con.clone(), log, working_dir.clone(), operators).await;
     }
 
-    list_components(log, String::from("./working-dir/"), filter_config.clone()).await;
+    list_components(
+        log,
+        api_version,
+        working_dir,
+        output_dir,
+        filter_config.clone(),
+    )
+    .await;
 }

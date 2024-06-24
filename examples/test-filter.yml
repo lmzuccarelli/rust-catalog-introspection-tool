@@ -1,9 +1,9 @@
 kind: FilterConfiguration
 apiVersion: mirror.openshift.io/v1alpha2
 catalogs: 
+  - registry.redhat.io/redhat/redhat-operator-index:v4.15
   - registry.redhat.io/redhat/redhat-operator-index:v4.14
-  - registry.redhat.io/redhat/redhat-operator-index:v4.13
-  - registry.redhat.io/redhat/redhat-operator-index:v4.12
 
 packages:
-  - name: elasticsearch-operator
+  - name: amq-streams
+  - name: windows-machine-config-operator
