@@ -12,7 +12,7 @@ mirror:
     packages:
     - name: amq-streams
       bundles:
-      - name: amqstreams.v2.7.0-1
+      - name: amqstreams.v2.7.0-2
     - name: windows-machine-config-operator
       bundles:
       - name: windows-machine-config-operator.v10.15.2
@@ -20,7 +20,7 @@ mirror:
     packages:
     - name: amq-streams
       bundles:
-      - name: amqstreams.v2.7.0-1
+      - name: amqstreams.v2.7.0-2
     - name: windows-machine-config-operator
       bundles:
       - name: windows-machine-config-operator.v9.0.2

@@ -895,8 +895,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-auth"
-version = "0.1.1"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-auth?branch=main#40cfcaabc5898372def1034124fc1bfa7f035f59"
+version = "0.3.0"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-auth?branch=main#297e93c358fba0c2b78f018acb8f40af85c71533"
 dependencies = [
  "base64",
  "custom-logger",
