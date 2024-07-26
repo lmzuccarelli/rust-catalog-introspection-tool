@@ -909,8 +909,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-catalog"
-version = "0.4.0"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-catalog?branch=main#f69dcf8f1005cc23f710606decca5d224cfd4b9b"
+version = "0.4.1"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-catalog?branch=main#07c9cda0456e580db347cea4c634b4bfdf3c95c5"
 dependencies = [
  "custom-logger",
  "serde",
@@ -923,8 +923,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-catalog-index"
-version = "0.1.2"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-catalog-index?branch=main#7039a051032d5aa0661deaacd0332e6dec7e1adb"
+version = "0.2.0"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-catalog-index?branch=main#2258c133a70e80b231e7d9e607577448dc7b9233"
 dependencies = [
  "custom-logger",
  "flate2",
@@ -949,8 +949,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-copy"
-version = "0.1.3"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-copy?branch=main#94d53f94744d278580b881dd2a47e6e5b1bd0628"
+version = "0.2.0"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-copy?branch=main#9fc7574107f91b79ed73c131b19797c1ebd97dc6"
 dependencies = [
  "async-trait",
  "base64",

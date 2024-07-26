@@ -25,14 +25,13 @@ pub async fn get_operator_catalog<T: RegistryInterface>(
 
     for ir in img_ref {
         let manifest_json = get_manifest_json_file(
-            // ./working-dir
             dir.clone(),
             ir.name.clone(),
             ir.version.clone(),
+            Some("amd64".to_string()),
         );
         log.trace(&format!("manifest json file {}", manifest_json));
         let token = get_token(log, ir.registry.clone()).await;
-        let working_dir_cache: String;
         // pointless continuing
         if token.is_err() {
             log.error(&format!("{:#?}", token.err()));
@@ -43,73 +42,125 @@ pub async fn get_operator_catalog<T: RegistryInterface>(
         // its safe to unwrap the token as the error has been handled
         let manifest = reg_con
             .get_manifest(manifest_url.clone(), token.as_ref().unwrap().to_string())
-            .await
-            .unwrap();
-
-        // create the full path
-        let manifest_dir = manifest_json.split("manifest.json").nth(0).unwrap();
-        log.info(&format!("manifest directory {}", manifest_dir));
-        fs::create_dir_all(manifest_dir).expect("unable to create directory manifest directory");
-        let manifest_exists = Path::new(&manifest_json).exists();
-        let res_manifest_in_mem = parse_json_manifest(manifest.clone()).unwrap();
-        working_dir_cache = get_cache_dir(dir.clone(), ir.name.clone(), ir.version.clone());
-        let cache_exists = Path::new(&working_dir_cache).exists();
-        let sub_dir = dir.clone() + "/blobs-store/";
-        let mut exists = true;
-        if manifest_exists {
-            let manifest_on_disk = fs::read_to_string(&manifest_json).unwrap();
-            let res_manifest_on_disk = parse_json_manifest(manifest_on_disk).unwrap();
-            if res_manifest_on_disk != res_manifest_in_mem || !cache_exists {
-                exists = false;
-            }
-        } else {
-            exists = false;
-        }
-        if !exists {
-            log.info("detected change in index manifest");
-            // detected a change so clean the dir contents
-            if cache_exists {
-                rm_rf::remove(&working_dir_cache).expect("should delete current untarred cache");
-                // re-create the cache directory
-                let mut builder = DirBuilder::new();
-                builder.mode(0o777);
-                builder
-                    .create(&working_dir_cache)
-                    .expect("unable to create directory");
-            }
-
-            fs::write(manifest_json, manifest.clone())
-                .expect("unable to write (index) manifest.json file");
-            let blobs_url = get_blobs_url(ir.clone());
-            // use a concurrent process to get related blobs
-            let response = reg_con
-                .get_blobs(
-                    log,
-                    sub_dir.clone(),
-                    blobs_url,
-                    token.unwrap().clone(),
-                    res_manifest_in_mem.fs_layers.clone(),
-                )
-                .await;
-            log.debug(&format!("completed image index download {:#?}", response));
-            untar_layers(
-                log,
-                sub_dir.clone(),
-                working_dir_cache.clone(),
-                res_manifest_in_mem.fs_layers,
-            )
             .await;
-            log.hi("completed untar of layers");
-        }
 
-        // find the directory 'configs'
-        let config_dir = find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;
-        log.mid(&format!(
-            "full path for directory 'configs' {} ",
-            &config_dir
-        ));
-        DeclarativeConfig::build_updated_configs(log, config_dir.clone())
-            .expect("should build updated configs");
+        if manifest.is_ok() {
+            let local_manifest = manifest.unwrap().clone();
+            log.trace(&format!("manifest {:#}", local_manifest.clone()));
+            let manifest_list = parse_json_manifestlist(local_manifest.clone());
+            if manifest_list.is_ok() {
+                for m in manifest_list.unwrap().manifests.iter() {
+                    let arch = m.platform.as_ref().unwrap().architecture.to_string();
+                    let manifest_json = get_manifest_json_file(
+                        dir.clone(),
+                        ir.name.clone(),
+                        ir.version.clone(),
+                        Some(arch.clone()),
+                    );
+                    // create the full path
+                    let manifest_dir = manifest_json.split("manifest.json").nth(0).unwrap();
+                    log.info(&format!("manifest directory {}", manifest_dir));
+                    fs::create_dir_all(manifest_dir).expect("unable to create manifest directory");
+                    log.trace(&format!("manifest json file {}", manifest_json));
+                    let mut ir_url = ir.clone();
+                    ir_url.version = m.digest.as_ref().unwrap().to_string();
+                    let mnfst_url = get_image_manifest_url(ir_url.clone());
+                    log.debug(&format!("manifest url {:#?}", mnfst_url.clone()));
+                    let manifest = reg_con
+                        .get_manifest(mnfst_url.clone(), token.as_ref().unwrap().clone())
+                        .await
+                        .unwrap();
+
+                    fs::write(manifest_json.clone(), manifest.clone())
+                        .expect("unable to write (index) manifest.json file");
+
+                    let working_dir_cache = get_cache_dir(
+                        dir.clone(),
+                        ir.name.clone(),
+                        ir.version.clone(),
+                        Some(arch.clone()),
+                    );
+
+                    let cache_exists = Path::new(&working_dir_cache).exists();
+                    let blobs_dir = dir.clone() + "/blobs-store/";
+                    let res_manifest_in_mem =
+                        parse_json_manifest_operator(manifest.clone()).unwrap();
+                    let mut exists = true;
+                    if cache_exists {
+                        let manifest_on_disk = fs::read_to_string(&manifest_json).unwrap();
+                        let res_manifest_on_disk =
+                            parse_json_manifest_operator(manifest_on_disk).unwrap();
+                        if res_manifest_on_disk != res_manifest_in_mem || !cache_exists {
+                            exists = false;
+                        }
+                    } else {
+                        exists = false;
+                    }
+
+                    if !exists {
+                        log.info("detected change in index manifest");
+                        // detected a change so clean the dir contents
+                        if cache_exists {
+                            rm_rf::remove(&working_dir_cache)
+                                .expect("should delete current untarred cache");
+                            // re-create the cache directory
+                            let mut builder = DirBuilder::new();
+                            builder.mode(0o777);
+                            builder
+                                .create(&working_dir_cache)
+                                .expect("unable to create directory");
+                        }
+
+                        let mut fslayers: Vec<FsLayer> = vec![];
+                        for l in res_manifest_in_mem.layers.unwrap().iter() {
+                            let fsl = FsLayer {
+                                blob_sum: l.digest.clone(),
+                                original_ref: Some(ir.name.clone()),
+                                size: Some(l.size),
+                            };
+                            fslayers.insert(0, fsl);
+                        }
+
+                        let blobs_url = get_blobs_url(ir.clone());
+                        // use a concurrent process to get related blobs
+                        let response = reg_con
+                            .get_blobs(
+                                log,
+                                blobs_dir.clone(),
+                                blobs_url,
+                                token.as_ref().unwrap().clone(),
+                                fslayers.clone(),
+                            )
+                            .await;
+                        log.debug(&format!("completed image index download {:#?}", response));
+
+                        untar_layers(
+                            log,
+                            blobs_dir.clone(),
+                            working_dir_cache.clone(),
+                            fslayers.clone(),
+                        )
+                        .await;
+                        log.hi("completed untar of layers");
+                    }
+                    // find the directory 'configs'
+                    let config_dir =
+                        find_dir(log, working_dir_cache.clone(), "configs".to_string()).await;
+                    log.mid(&format!(
+                        "full path for directory 'configs' {} ",
+                        &config_dir
+                    ));
+                    DeclarativeConfig::build_updated_configs(log, config_dir.clone())
+                        .expect("should build updated configs");
+
+                    // as the bundles will be the same for all architectures - we just get the amd64
+                    // this can be changed later but it allows for full arch support
+                    if arch.clone() == "amd64" {
+                        break;
+                    }
+                }
+            }
+        }
     }
 }
 
