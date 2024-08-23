@@ -16,7 +16,7 @@ pub async fn get_operator_catalog<T: RegistryInterface>(
     log: &Logging,
     dir: String,
     operators: Vec<Operator>,
-) {
+) -> Result<(), MirrorError> {
     log.hi("operator download");
 
     // parse the config - iterate through each catalog
@@ -24,11 +24,12 @@ pub async fn get_operator_catalog<T: RegistryInterface>(
     log.debug(&format!("image refs {:#?}", img_ref));
 
     for ir in img_ref {
-        let manifest_json = get_manifest_json_file(
+        let manifest_json = format!(
+            "{}/{}/{}/{}/.manifest.json",
             dir.clone(),
             ir.name.clone(),
             ir.version.clone(),
-            Some("amd64".to_string()),
+            "amd64".to_string(),
         );
         log.trace(&format!("manifest json file {}", manifest_json));
         let token = get_token(log, ir.registry.clone()).await;
@@ -38,7 +39,10 @@ pub async fn get_operator_catalog<T: RegistryInterface>(
             process::exit(1);
         }
         // use token to get manifest
-        let manifest_url = get_image_manifest_url(ir.clone());
+        let manifest_url = format!(
+            "https://{}/v2/{}/{}/manifests/{}",
+            ir.registry, ir.namespace, ir.name, ir.version
+        );
         // its safe to unwrap the token as the error has been handled
         let manifest = reg_con
             .get_manifest(manifest_url.clone(), token.as_ref().unwrap().to_string())
@@ -51,97 +55,127 @@ pub async fn get_operator_catalog<T: RegistryInterface>(
             if manifest_list.is_ok() {
                 for m in manifest_list.unwrap().manifests.iter() {
                     let arch = m.platform.as_ref().unwrap().architecture.to_string();
-                    let manifest_json = get_manifest_json_file(
+                    let manifest_json = format!(
+                        "{}/{}/{}/{}/manifest.json",
                         dir.clone(),
                         ir.name.clone(),
                         ir.version.clone(),
-                        Some(arch.clone()),
+                        arch.clone(),
                     );
                     // create the full path
                     let manifest_dir = manifest_json.split("manifest.json").nth(0).unwrap();
-                    log.info(&format!("manifest directory {}", manifest_dir));
-                    fs::create_dir_all(manifest_dir).expect("unable to create manifest directory");
-                    log.trace(&format!("manifest json file {}", manifest_json));
+                    let cr = fs::create_dir_all(manifest_dir);
+                    if cr.is_err() {
+                        let err = MirrorError::new(&format!(
+                            "creating directory {}",
+                            cr.err().unwrap().to_string().to_lowercase()
+                        ));
+                        return Err(err);
+                    }
                     let mut ir_url = ir.clone();
                     ir_url.version = m.digest.as_ref().unwrap().to_string();
-                    let mnfst_url = get_image_manifest_url(ir_url.clone());
-                    log.debug(&format!("manifest url {:#?}", mnfst_url.clone()));
-                    let manifest = reg_con
-                        .get_manifest(mnfst_url.clone(), token.as_ref().unwrap().clone())
-                        .await
-                        .unwrap();
 
-                    fs::write(manifest_json.clone(), manifest.clone())
-                        .expect("unable to write (index) manifest.json file");
+                    let manifest_url = format!(
+                        "https://{}/v2/{}/{}/manifests/{}",
+                        ir_url.registry, ir_url.namespace, ir_url.name, ir_url.version
+                    );
 
-                    let working_dir_cache = get_cache_dir(
+                    let res_manifest = reg_con
+                        .get_manifest(manifest_url.clone(), token.as_ref().unwrap().clone())
+                        .await;
+
+                    let working_dir_cache = format!(
+                        "{}/{}/{}/{}/cache",
                         dir.clone(),
                         ir.name.clone(),
                         ir.version.clone(),
-                        Some(arch.clone()),
+                        arch.clone(),
                     );
 
-                    let cache_exists = Path::new(&working_dir_cache).exists();
-                    let blobs_dir = dir.clone() + "/blobs-store/";
-                    let res_manifest_in_mem =
-                        parse_json_manifest_operator(manifest.clone()).unwrap();
-                    let mut exists = true;
-                    if cache_exists {
-                        let manifest_on_disk = fs::read_to_string(&manifest_json).unwrap();
-                        let res_manifest_on_disk =
-                            parse_json_manifest_operator(manifest_on_disk).unwrap();
-                        if res_manifest_on_disk != res_manifest_in_mem || !cache_exists {
+                    if res_manifest.is_ok() {
+                        let fw = fs::write(
+                            manifest_json.clone(),
+                            res_manifest.as_ref().unwrap().clone(),
+                        );
+                        if fw.is_err() {
+                            let err = MirrorError::new(&format!(
+                                "writing manifest {}",
+                                fw.err().unwrap().to_string().to_lowercase()
+                            ));
+                            return Err(err);
+                        }
+                        let cache_exists = Path::new(&working_dir_cache).exists();
+                        let blobs_dir = dir.clone() + "/blobs-store/";
+                        let res_manifest_in_mem =
+                            parse_json_manifest_operator(res_manifest.unwrap()).unwrap();
+                        let mut exists = true;
+                        if cache_exists {
+                            let manifest_on_disk = fs::read_to_string(&manifest_json).unwrap();
+                            let res_manifest_on_disk =
+                                parse_json_manifest_operator(manifest_on_disk).unwrap();
+                            if res_manifest_on_disk != res_manifest_in_mem || !cache_exists {
+                                exists = false;
+                            }
+                        } else {
                             exists = false;
                         }
-                    } else {
-                        exists = false;
-                    }
 
-                    if !exists {
-                        log.info("detected change in index manifest");
-                        // detected a change so clean the dir contents
-                        if cache_exists {
-                            rm_rf::remove(&working_dir_cache)
-                                .expect("should delete current untarred cache");
-                            // re-create the cache directory
-                            let mut builder = DirBuilder::new();
-                            builder.mode(0o777);
-                            builder
-                                .create(&working_dir_cache)
-                                .expect("unable to create directory");
-                        }
+                        if !exists {
+                            log.info(&format!(
+                                "detected change in index manifest {}/{}:{}",
+                                ir.namespace, ir.name, ir.version
+                            ));
+                            // detected a change so clean the dir contents
+                            if cache_exists {
+                                rm_rf::remove(&working_dir_cache)
+                                    .expect("should delete current untarred cache");
+                                // re-create the cache directory
+                                let mut builder = DirBuilder::new();
+                                builder.mode(0o777);
+                                builder
+                                    .create(&working_dir_cache)
+                                    .expect("unable to create directory");
+                            }
 
-                        let mut fslayers: Vec<FsLayer> = vec![];
-                        for l in res_manifest_in_mem.layers.unwrap().iter() {
-                            let fsl = FsLayer {
-                                blob_sum: l.digest.clone(),
-                                original_ref: Some(ir.name.clone()),
-                                size: Some(l.size),
-                            };
-                            fslayers.insert(0, fsl);
-                        }
+                            let mut fslayers: Vec<FsLayer> = vec![];
+                            for l in res_manifest_in_mem.layers.unwrap().iter() {
+                                let fsl = FsLayer {
+                                    blob_sum: l.digest.clone(),
+                                    original_ref: Some(ir.name.clone()),
+                                    size: Some(l.size),
+                                    number: None,
+                                };
+                                fslayers.insert(0, fsl);
+                            }
 
-                        let blobs_url = get_blobs_url(ir.clone());
-                        // use a concurrent process to get related blobs
-                        let response = reg_con
-                            .get_blobs(
+                            let blobs_url = get_blobs_url(ir.clone());
+                            // use a concurrent process to get related blobs
+                            let response = reg_con
+                                .get_blobs(
+                                    log,
+                                    blobs_dir.clone(),
+                                    blobs_url,
+                                    token.as_ref().unwrap().clone(),
+                                    fslayers.clone(),
+                                )
+                                .await;
+                            log.debug(&format!("completed image index download {:#?}", response));
+
+                            untar_layers(
                                 log,
                                 blobs_dir.clone(),
-                                blobs_url,
-                                token.as_ref().unwrap().clone(),
+                                working_dir_cache.clone(),
                                 fslayers.clone(),
                             )
                             .await;
-                        log.debug(&format!("completed image index download {:#?}", response));
-
-                        untar_layers(
-                            log,
-                            blobs_dir.clone(),
-                            working_dir_cache.clone(),
-                            fslayers.clone(),
-                        )
-                        .await;
-                        log.hi("completed untar of layers");
+                            log.hi("completed untar of layers");
+                        }
+                    } else {
+                        let err = MirrorError::new(&format!(
+                            "api call for manifest {}",
+                            res_manifest.err().unwrap().to_string().to_lowercase()
+                        ));
+                        return Err(err);
                     }
                     // find the directory 'configs'
                     let config_dir =
@@ -160,8 +194,15 @@ pub async fn get_operator_catalog<T: RegistryInterface>(
                     }
                 }
             }
+        } else {
+            let err = MirrorError::new(&format!(
+                "api call for manifest {}",
+                manifest.err().unwrap().to_string().to_lowercase()
+            ));
+            return Err(err);
         }
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -268,7 +309,7 @@ mod tests {
                 _url: String,
                 _token: String,
                 _layers: Vec<FsLayer>,
-            ) -> Result<String, Box<dyn std::error::Error>> {
+            ) -> Result<String, MirrorError> {
                 log.info("testing logging in fake test");
                 Ok(String::from("test"))
             }

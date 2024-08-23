@@ -194,7 +194,7 @@ checksum = "514de17de45fdb8dc022b1a7975556c53c86f9f0aa5f534b98977b171857c2c9"
 
 [[package]]
 name = "catalog-introspection-tool"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "base64",
@@ -895,8 +895,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-auth"
-version = "0.3.0"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-auth?branch=main#297e93c358fba0c2b78f018acb8f40af85c71533"
+version = "0.5.0"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-auth?branch=main#da58f61ccdfca9723f60f7b1852fc62ec9050e97"
 dependencies = [
  "base64",
  "custom-logger",
@@ -923,8 +923,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-catalog-index"
-version = "0.2.0"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-catalog-index?branch=main#2258c133a70e80b231e7d9e607577448dc7b9233"
+version = "0.3.0"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-catalog-index?branch=main#98ce278e82ed4976a0694cf0cea020d12f2b0f8e"
 dependencies = [
  "custom-logger",
  "flate2",
@@ -938,8 +938,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-config"
-version = "0.1.0"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-config?branch=main#dab48f85ab30ead798916851f6ef8f70e85488c6"
+version = "0.2.0"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-config?branch=main#7d4515c4906c1b9b3c1261766960e6304c2eecc8"
 dependencies = [
  "serde",
  "serde_derive",
@@ -949,8 +949,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-copy"
-version = "0.2.0"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-copy?branch=main#9fc7574107f91b79ed73c131b19797c1ebd97dc6"
+version = "0.5.0"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-copy?branch=main#cfbfd6900934a64a874b2c31bc474ca5b59977f7"
 dependencies = [
  "async-trait",
  "base64",

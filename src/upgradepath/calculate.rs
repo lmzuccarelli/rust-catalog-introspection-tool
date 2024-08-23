@@ -23,7 +23,7 @@ pub async fn list_components(
         log.lo(&format!("catalog {}", catalog));
         let last = catalog.split('/').last().unwrap();
         let index_dir = last.replace(":", "/");
-        let catalog_dir = dir.clone() + &index_dir + "/amd64/cache/";
+        let catalog_dir = format!("{}/{}/{}/", dir.clone(), &index_dir, "/amd64/cache/");
         let result = WalkDir::new(&catalog_dir);
         for file in result.into_iter() {
             // iterate through each operator in the filterconfig
