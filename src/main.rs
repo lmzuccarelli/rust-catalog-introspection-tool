@@ -1,6 +1,7 @@
 use clap::Parser;
 use custom_logger::*;
-use mirror_copy::*;
+use mirror_copy::ImplDownloadImageInterface;
+//use mirror_copy::*;
 use mirror_error::MirrorError;
 use mirror_utils::fs_handler;
 use std::fs;
@@ -82,7 +83,7 @@ async fn main() -> Result<(), MirrorError> {
             }
 
             // initialize the client request interface
-            let reg_con = ImplRegistryInterface {};
+            let reg_con = ImplDownloadImageInterface {};
 
             // check for catalog images
             if res_fc.catalogs.len() > 0 {

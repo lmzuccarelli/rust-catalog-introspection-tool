@@ -12,7 +12,7 @@ mirror:
     packages:
     - name: amq-streams
       bundles:
-      - name: amqstreams.v2.7.0-3
+      - name: amqstreams.v2.7.0-4
     - name: kubernetes-nmstate-operator
       bundles:
       - name: kubernetes-nmstate-operator.4.15.0-202408211438
