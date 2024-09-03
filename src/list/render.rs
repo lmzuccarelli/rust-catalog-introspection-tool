@@ -1,7 +1,7 @@
 use custom_logger::*;
 use mirror_catalog::*;
 use mirror_catalog_index::find_dir;
-use mirror_copy::MirrorError;
+use mirror_error::MirrorError;
 use walkdir::WalkDir;
 
 pub async fn render_list(
@@ -31,7 +31,7 @@ pub async fn render_list(
                     let f = file.unwrap().clone().path().display().to_string();
                     if f.contains("/configs/") && !f.contains("/updated-configs") {
                         println!(
-                            "\x1b[05C\x1b[1;94m{}\x1b[0m",
+                            "\x1b[05C\x1b[0;97m{}\x1b[0m",
                             f.split("/configs/").nth(1).unwrap()
                         );
                     }
@@ -64,21 +64,21 @@ pub async fn render_list(
                 break;
             }
         }
-        println!("\x1b[05C\x1b[1;94m{}\x1b[0m\x1b[1A", operator.unwrap());
+        println!("\x1b[05C\x1b[1;97m{}\x1b[0m\x1b[1A", operator.unwrap());
         for k in keys {
             if k.contains("olm.channel") {
                 let channel = dc_map.get(k).unwrap();
                 let name = channel.name.as_ref().unwrap().to_string();
                 if name == default_channel {
                     println!(
-                        "\x1b[55C\x1b[1;97m{}\x1b[0m\x1b[1A",
+                        "\x1b[55C\x1b[1;94m{}\x1b[0m\x1b[1A",
                         channel.name.as_ref().unwrap()
                     );
                 } else {
                     println!("\x1b[55C{}\x1b[1A", channel.name.as_ref().unwrap());
                 }
                 for e in channel.entries.as_ref().unwrap().iter() {
-                    println!("\x1b[85C\x1b[1;95m{}\x1b[0m", e.name);
+                    println!("\x1b[85C\x1b[0;97m{}\x1b[0m", e.name);
                 }
                 println!("");
             }

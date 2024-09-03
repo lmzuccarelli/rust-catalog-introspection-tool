@@ -15,29 +15,7 @@ mirror:
       - name: amqstreams.v2.7.0-3
     - name: kubernetes-nmstate-operator
       bundles:
-      - name: kubernetes-nmstate-operator.4.15.0-202408130908
+      - name: kubernetes-nmstate-operator.4.15.0-202408211438
     - name: windows-machine-config-operator
       bundles:
       - name: windows-machine-config-operator.v10.15.3
-  - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.14
-    packages:
-    - name: amq-streams
-      bundles:
-      - name: amqstreams.v2.7.0-3
-    - name: kubernetes-nmstate-operator
-      bundles:
-      - name: kubernetes-nmstate-operator.4.14.0-202407310940
-    - name: windows-machine-config-operator
-      bundles:
-      - name: windows-machine-config-operator.v9.0.2
-  - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.12
-    packages:
-    - name: amq-streams
-      bundles:
-      - name: amqstreams.v2.7.0-3
-    - name: kubernetes-nmstate-operator
-      bundles:
-      - name: kubernetes-nmstate-operator.4.12.0-202408071159
-    - name: windows-machine-config-operator
-      bundles:
-      - name: windows-machine-config-operator.v7.2.1-0.1720400802.p

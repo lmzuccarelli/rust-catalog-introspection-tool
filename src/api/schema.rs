@@ -8,16 +8,12 @@ use serde_derive::Serialize;
 #[command(name = "rust-operator-introspection-tool")]
 #[command(author = "Luigi Mario Zuccarelli <luzuccar@redhat.com>")]
 #[command(version = "0.0.1")]
-#[command(about = "Used to calcluate an upgrade path (heuristic approach) for a given (list) of operators and generate appropriate imagesetconfig yaml files", long_about = None)]
+#[command(about = "Used to calcluate an upgrade path (heuristic approach) for a given (list) of RedHat operators and generate appropriate imagesetconfig yaml files", long_about = None)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
-
-    /// config file to use
-    #[arg(short, long, value_name = "config")]
-    pub config: Option<String>,
-
+    /// set the loglevel
     #[arg(
         value_enum,
         short,
@@ -27,42 +23,6 @@ pub struct Cli {
         help = "Set the log level [possible values: info, debug, trace]"
     )]
     pub loglevel: Option<String>,
-
-    #[arg(
-        short,
-        long,
-        value_name = "skip-update",
-        default_value = "false",
-        help = "If set will skip the catalog update check"
-    )]
-    pub skip_update: Option<bool>,
-
-    #[arg(
-        short,
-        long,
-        value_name = "working-dir",
-        default_value = "",
-        help = "Sets the working-dir, used to share existing caches with other catalog tooling"
-    )]
-    pub working_dir: String,
-
-    #[arg(
-        short,
-        long,
-        value_name = "api-version",
-        default_value = "v2alpha1",
-        help = "Sets the api version for the imagesetconfig"
-    )]
-    pub api_version: String,
-
-    #[arg(
-        short,
-        long,
-        value_name = "output-dir",
-        default_value = "artifacts",
-        help = "The directory to output the auto-generated imagesetconfig to"
-    )]
-    pub output_dir: String,
 }
 
 #[derive(Subcommand)]
@@ -73,7 +33,7 @@ pub enum Commands {
             short,
             long,
             value_name = "working-dir",
-            help = "Sets the working-dir, used to share existing caches with other catalog tooling (required)"
+            help = "The directory where all indexes have been downloaded (required)"
         )]
         working_dir: String,
 
@@ -92,6 +52,53 @@ pub enum Commands {
             help = "Filter the list with a specific operator"
         )]
         operator: Option<String>,
+    },
+    /// Update subcommand (fetches the latest catalog from RedHat registry)
+    Update {
+        /// config file to use
+        #[arg(short, long, value_name = "config_file")]
+        config_file: String,
+
+        #[arg(
+            short,
+            long,
+            value_name = "working-dir",
+            help = "Sets the working-dir, used to share existing caches with other catalog tooling"
+        )]
+        working_dir: String,
+    },
+    /// Upgradepath subcommand (calculates an upgradepath on the given filterconfig and generates
+    /// an imagesetconfig)
+    Upgradepath {
+        #[arg(
+            short,
+            long,
+            value_name = "working-dir",
+            help = "The directory where all indexes have been downloaded (required)"
+        )]
+        working_dir: String,
+
+        /// config file to use
+        #[arg(short, long, value_name = "config_file")]
+        config_file: String,
+
+        #[arg(
+            short,
+            long,
+            value_name = "api-version",
+            default_value = "v2alpha1",
+            help = "Sets the api version when generating the imagesetconfig"
+        )]
+        api_version: String,
+
+        #[arg(
+            short,
+            long,
+            value_name = "output-dir",
+            default_value = "artifacts",
+            help = "The directory to output the auto-generated imagesetconfig to"
+        )]
+        output_dir: String,
     },
 }
 

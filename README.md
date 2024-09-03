@@ -30,8 +30,8 @@ Ensure that you have the correct permissions set in the $XDG_RUNTIME_DIR/contain
 
 You can download a pull secret from https://console.redhat.com/openshift/install/pull-secret and copy it to $XDG_RUNTIME_DIR/containers/auth.json
 
-Execute the following to copy and calculate upgrade paths for several
-catalogs and specific packages (see this layouts `examples/` directory)
+**NB** Ensure you have downloaded the catalogs (cache) before using the list or upgradepath sub commands
+
 
 ```bash
 
@@ -50,7 +50,7 @@ packages:
   - name: windows-machine-config-operator
 
 # execute the following command (as an example)
-./target/release/catalog-introspection-tool --config examples/test-filter.yml --working-dir ../rust-image-mirror/working-dir/ --loglevel trace
+./target/release/catalog-introspection-tool update --config examples/test-filter.yml --working-dir ../rust-image-mirror/working-dir/ --loglevel trace
 
 # a quick overview of the command line
 #
@@ -58,8 +58,32 @@ packages:
 #
 # --config is the filterconfig file created above
 # --working-dir a directory where to create/use a shared cache
-# --loglevel the loglevel output (info, debug or trace)
+
 ```
+
+Once you have the catalog cached then you can execute the list/upgradepath commands
+
+```bash
+# list all operators in a catalog
+./target/release/catalog-introspection-tool list --working-dir ../rust-image-mirror/working-dir/ --catalog redhat-operator-index:v4.15
+
+# list the bundles for the windows-machine-config-operator
+./target/release/catalog-introspection-tool list --working-dir ../rust-image-mirror/working-dir --catalog redhat-operator-index:v4.15 --operator windows-machine-config-operator
+```
+
+Below is screenshot of the console output for the windows-machine-config-operator (note the default channel is highlighted in blue)
+
+![List outptut](assets/list.png)
+
+To view a suggested upgrade path execute the following command
+
+```bash
+./target/release/catalog-introspection-tool upgradepath --working-dir ../rust-image-mirror/test-lmz --config-file examples/test-filter.yml --output-dir artifacts
+```
+Below is a truncated screenshot of the upgradepath console output together with the generated imagesetconfig
+
+![Upgradepath](assets/upgradepath.png)
+
 
 ## Reference : OLM update graph documentation
 

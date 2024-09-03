@@ -1,13 +1,15 @@
 use clap::Parser;
 use custom_logger::*;
 use mirror_copy::*;
+use mirror_error::MirrorError;
+use mirror_utils::fs_handler;
 use std::fs;
-use std::path::Path;
 use std::process;
 use tokio;
 
 // define local modules
 mod api;
+mod batch;
 mod config;
 mod isc;
 mod list;
@@ -26,11 +28,7 @@ use upgradepath::calculate::*;
 async fn main() -> Result<(), MirrorError> {
     let args = Cli::parse();
 
-    let working_dir = args.working_dir.to_string();
     let lvl = args.loglevel.as_ref().unwrap();
-    let skip_update = args.skip_update.as_ref().unwrap();
-    let api_version = args.api_version.to_string();
-    let output_dir = args.output_dir.to_string();
 
     let l = match lvl.as_str() {
         "info" => Level::INFO,
@@ -41,17 +39,6 @@ async fn main() -> Result<(), MirrorError> {
 
     let log = &Logging { log_level: l };
 
-    // create artifacts directory
-    let res = fs::create_dir_all(output_dir.clone());
-    if res.is_err() {
-        let err = MirrorError::new(&format!(
-            "creating directory {} {}",
-            output_dir.clone(),
-            res.err().unwrap().to_string().to_lowercase()
-        ));
-        return Err(err);
-    }
-
     match &args.command {
         Some(Commands::List {
             working_dir,
@@ -61,46 +48,27 @@ async fn main() -> Result<(), MirrorError> {
             let res =
                 render_list(log, working_dir.clone(), catalog.clone(), operator.clone()).await;
             if res.is_err() {
-                let err = MirrorError::new(&format!(
-                    "could not list catalog {} {}",
+                log.error(&format!(
+                    "[main] {} {}",
                     catalog,
                     res.err().unwrap().to_string().to_lowercase()
                 ));
-                return Err(err);
-            }
-        }
-        None => {
-            if args.config.is_none() {
-                log.error("config file is required");
                 process::exit(1);
             }
-
+        }
+        Some(Commands::Update {
+            working_dir,
+            config_file,
+        }) => {
             // Parse the config serde_yaml::FilterConfiguration.
-            let res_config = load_config(args.config.unwrap());
-            if res_config.is_err() {
-                let err = MirrorError::new(&format!(
-                    "reading filter config {}",
-                    res_config.err().unwrap().to_string().to_lowercase()
-                ));
-                return Err(err);
-            }
-            let config = res_config.unwrap();
+            let res_config = load_config(config_file.to_string()).await?;
+            let res_fc = parse_yaml_config(res_config)?;
 
-            let res_fc = parse_yaml_config(config);
-            if res_fc.is_err() {
-                let err = MirrorError::new(&format!(
-                    "parsing config {}",
-                    res_fc.err().unwrap().to_string().to_lowercase()
-                ));
-                return Err(err);
-            }
-            let filter_config = res_fc.unwrap();
-
-            log.debug(&format!("{:#?}", filter_config.operators));
+            log.debug(&format!("{:#?}", res_fc.operators.clone()));
 
             // verify catalog images
             let mut imgs: Vec<String> = vec![];
-            for img in filter_config.catalogs.clone() {
+            for img in res_fc.catalogs.clone() {
                 let i = img.split(":").nth(0).unwrap().to_string();
                 if !imgs.contains(&i) {
                     imgs.insert(0, i);
@@ -117,7 +85,7 @@ async fn main() -> Result<(), MirrorError> {
             let reg_con = ImplRegistryInterface {};
 
             // check for catalog images
-            if filter_config.catalogs.len() > 0 && !skip_update {
+            if res_fc.catalogs.len() > 0 {
                 let res = fs::create_dir_all(&working_dir);
                 if res.is_err() {
                     let err = MirrorError::new(&format!(
@@ -128,16 +96,22 @@ async fn main() -> Result<(), MirrorError> {
                 }
                 // quickly convert to Operator struct
                 let mut operators = vec![];
-                for op in filter_config.catalogs.clone() {
+                for op in res_fc.catalogs.clone() {
                     let o = mirror_config::Operator {
                         catalog: op.clone(),
                         packages: None,
                     };
                     operators.insert(0, o);
                 }
-                let res =
-                    get_operator_catalog(reg_con.clone(), log, working_dir.clone(), operators)
-                        .await;
+                let res = get_operator_catalog(
+                    reg_con.clone(),
+                    log,
+                    working_dir.clone(),
+                    false,
+                    true,
+                    operators,
+                )
+                .await;
                 if res.is_err() {
                     let err = MirrorError::new(&format!(
                         "creating directory {}",
@@ -146,15 +120,33 @@ async fn main() -> Result<(), MirrorError> {
                     return Err(err);
                 }
             }
+        }
+        Some(Commands::Upgradepath {
+            config_file,
+            working_dir,
+            output_dir,
+            api_version,
+        }) => {
+            // create artifacts directory
+            fs_handler(output_dir.clone(), "create_dir", None).await?;
+            // Parse the config serde_yaml::FilterConfiguration.
+            let res_config = load_config(config_file.to_string()).await?;
+            let res_fc = parse_yaml_config(res_config)?;
 
-            list_components(
+            process_upgradepath(
                 log,
-                api_version,
-                working_dir,
-                output_dir,
-                filter_config.clone(),
+                api_version.to_string(),
+                working_dir.to_string(),
+                output_dir.to_string(),
+                res_fc.clone(),
             )
             .await;
+        }
+        None => {
+            log.error(
+                "please ensure you have selected the correct sub command use --help for assistence",
+            );
+            process::exit(1);
         }
     }
     Ok(())

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::{cmp::*, fs};
 use walkdir::WalkDir;
 
-pub async fn list_components(
+pub async fn process_upgradepath(
     log: &Logging,
     api_version: String,
     dir: String,
