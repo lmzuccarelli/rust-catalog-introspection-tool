@@ -193,39 +193,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "514de17de45fdb8dc022b1a7975556c53c86f9f0aa5f534b98977b171857c2c9"
 
 [[package]]
-name = "catalog-introspection-tool"
-version = "0.3.0"
-dependencies = [
- "async-trait",
- "base64",
- "clap",
- "custom-logger",
- "flate2",
- "futures",
- "mirror-auth",
- "mirror-catalog",
- "mirror-catalog-index",
- "mirror-config",
- "mirror-copy",
- "mirror-error",
- "mirror-utils",
- "mockito",
- "reqwest",
- "rm_rf",
- "semver",
- "serde",
- "serde_derive",
- "serde_json",
- "serde_with",
- "serde_yaml",
- "serial_test",
- "tar",
- "tokio",
- "tokio-test",
- "walkdir",
-]
-
-[[package]]
 name = "cc"
 version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -897,8 +864,8 @@ dependencies = [
 
 [[package]]
 name = "mirror-auth"
-version = "0.6.0"
-source = "git+https://github.com/lmzuccarelli/rust-mirror-auth?branch=main#6eede51b2323c6adb440688f74c4858ee840973b"
+version = "0.7.0"
+source = "git+https://github.com/lmzuccarelli/rust-mirror-auth?branch=main#e318b32250203f6c487babe8d0ce3665d175225d"
 dependencies = [
  "async-trait",
  "base64",
@@ -1111,6 +1078,39 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "operataor-catalog-introspection-tool"
+version = "0.3.0"
+dependencies = [
+ "async-trait",
+ "base64",
+ "clap",
+ "custom-logger",
+ "flate2",
+ "futures",
+ "mirror-auth",
+ "mirror-catalog",
+ "mirror-catalog-index",
+ "mirror-config",
+ "mirror-copy",
+ "mirror-error",
+ "mirror-utils",
+ "mockito",
+ "reqwest",
+ "rm_rf",
+ "semver",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "serde_yaml",
+ "serial_test",
+ "tar",
+ "tokio",
+ "tokio-test",
+ "walkdir",
 ]
 
 [[package]]
